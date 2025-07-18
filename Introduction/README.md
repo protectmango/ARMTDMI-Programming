@@ -77,36 +77,4 @@
 
 ## LPC2129 Block Diagram
 
-```mermaid
-sequenceDiagram
-    participant ARM as ARM7TDMI-S Processor
-    participant Flash as Flash Memory
-    participant SRAM as SRAM
-    participant MAM as Memory Accelerator Module
-    participant APB as APB Bridge
-    participant Peripheral as Generic Peripheral (e.g., UART, Timer)
-    participant VIC as Vectored Interrupt Controller
-
-    ARM->>MAM: Instruction Fetch Request
-    MAM->>Flash: Fetch Instruction
-    Flash-->>MAM: Instruction Data
-    MAM-->>ARM: Instruction Data
-    Note right of ARM: CPU executes instruction
-
-    ARM->>APB: Data Write Request (to Peripheral Register)
-    APB->>Peripheral: Write Data
-    Peripheral-->>APB: (Optional) Acknowledge
-    APB-->>ARM: (Optional) Acknowledge
-
-    Peripheral->>VIC: Generates Interrupt Request
-    Note left of VIC: VIC prioritizes and vectors
-    VIC->>ARM: Signals Interrupt (IRQ/FIQ line)
-    ARM->>SRAM: Saves Context (SPSR, LR, other registers)
-    ARM->>VIC: Jumps to ISR address (via Vector Table)
-    ARM->>Peripheral: Executes ISR (e.g., reads data, clears flag)
-    Peripheral-->>ARM: (Optional) Data/Status
-    ARM->>VIC: Acknowledges Interrupt (VICVectAddr = 0)
-    ARM->>SRAM: Restores Context (SPSR to CPSR, LR to PC, other registers)
-    ARM-->>Flash: Returns to interrupted program
-
-```
+![alt text](image.png)
