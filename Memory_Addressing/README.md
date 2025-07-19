@@ -8,6 +8,8 @@
 
 ### AHB (Advanced High-performance Bus)
 
+![alt text](ahb-peripheral.png)
+
 - **Purpose**   
 The **AHB** is designed for high-performance modules that require high bandwidth
     - such as the **ARM7TDMI-S** CPU
@@ -27,6 +29,8 @@ The primary peripheral connected directly to the **AHB** in the LPC2129 is the *
     - The **AHB** also interfaces with the on-chip memory controllers **(Flash and SRAM)**.
 
 ### VPB (VLSI Peripheral Bus)
+
+![alt text](vpb-peripheral.png)
 
 - **Purpose**   
 The **VPB** (VLSI Peripheral Bus) is a compatible **superset** of ARM's **APB** (Advanced Peripheral Bus). 
