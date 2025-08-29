@@ -64,48 +64,184 @@ The address mapping for the DS1307 is as follows:
  
  */
 // header.h
-#define CSO (1<<7)
-extern void spi0_init(void);
-typedef unsigned short int ushort;
-typedef unsigned char us;
-us spi0(us data);
-ushort read_mcp3204(us ch_num);
+#include <lpc21xx.h>
 
-// mcp3204-driver.c
+// Type definitions from the original OCR
+typedef unsigned char us;
+typedef unsigned short int ushort;
+
+// Function prototypes for I2C and UART
+extern void i2c_init(void);
+extern void i2c_byte_write_frame(us sa, us mr, us data);
+extern us i2c_byte_read_frame(us sa, us mr);
+extern void uart0_init(ushort baudrate);
+extern void uart0_tx_string(const char *s);
+extern void uart0_tx_integer(ushort value);
+extern void delay_ms(ushort ms);
+extern void lcd_init(void);
+extern void lcd_cmd(us command);
+
+// i2c_driver.c
 #include <lpc21xx.h>
 #include "header.h"
 
-ushort read_mcp3204(us ch_num) {
-    us byteL = 0, byteH = 0;
-    ushort result = 0;
-    ch_num <<= 6; // set the ch-num
+// Macro to check the SI bit in I2CONSET
+#define SI ((I2CONSET >> 3) & 1)
 
-    IOCLR0 = CSO; // select slave
-    spi0(0x06); // start bit, SGL mode, D2
-    byteH = spi0(ch_num); // CH select
-    byteL = spi0(0x00);
-    IOSET0 = CSO; // deselect slave
-
-    byteH &= 0x0F; // mask higher nibble
-    result = (byteH << 8) | byteL; // merge result
-    return result;
+// Function to initialize the I2C peripheral
+void i2c_init(void) {
+    PINSEL0 = 0x50; // Configure P0.2 as SCL and P0.3 as SDA
+    I2SCLL = 75;    // Set SCL low time
+    I2SCLH = 75;    // Set SCL high time for 100 Kbps with 50% duty cycle
+    I2CONSET = (1 << 6); // Enable I2C peripheral
 }
 
-// main_mcp3204.C
+// Function to write a byte frame to an I2C slave
+void i2c_byte_write_frame(us sa, us mr, us data) {
+    /* Generate start condition */
+    I2CONSET = (1 << 5); // STA=1
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    I2CONCLR = (1 << 5); // STA=0
+    if (I2STAT != 0x8) {
+        uart0_tx_string("Err: start condition \r\n");
+        goto exit;
+    }
+
+    /* Send slave address with write bit & check ACK */
+    I2DAT = sa; // SA+W
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x20) {
+        uart0_tx_string("Err: SA+w\r\n");
+        goto exit;
+    }
+
+    /* Send memory address & check ACK */
+    I2DAT = mr; // memory address
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x30) {
+        uart0_tx_string("Err: m/r addr \r\n");
+        goto exit;
+    }
+
+    /* Send data & check ACK*/
+    I2DAT = data; // data
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x30) {
+        uart0_tx_string("Err: data \r\n");
+        goto exit;
+    }
+
+    /* Generate stop condition */
+    exit:
+    I2CONSET = (1 << 4); // STO=1
+    I2CONCLR = (1 << 3); // clear SI
+}
+
+// Function to read a byte frame from an I2C slave
+us i2c_byte_read_frame(us sa, us mr) {
+    us temp;
+    /* Generate start condition */
+    I2CONSET = (1 << 5); // STA=1
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    I2CONCLR = (1 << 5); // STA=0
+    if (I2STAT != 0x8) {
+        uart0_tx_string("Err: start condition \r\n");
+        goto exit;
+    }
+
+    /* Send slave address with write bit & check ACK */
+    I2DAT = sa; // SA+W
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x20) {
+        uart0_tx_string("Err: SA+w\r\n");
+        goto exit;
+    }
+
+    /* Send memory address & check Ack*/
+    I2DAT = mr; // memory address
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x30) {
+        uart0_tx_string("Err: m/r addr \r\n");
+        goto exit;
+    }
+
+    /* Generate restart condition */
+    I2CONSET = (1 << 5); // STA=1
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    I2CONCLR = (1 << 5); // STA=0
+    if (I2STAT != 0x10) {
+        uart0_tx_string("Err: Restart condition \r\n");
+        goto exit;
+    }
+
+    /* Send slave address with read bit & Check ACK */
+    I2DAT = sa | 1; // SA+R
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    if (I2STAT == 0x48) {
+        uart0_tx_string("Err: SA+r\r\n");
+        goto exit;
+    }
+
+    /* Read data from the slave & generate No Ack*/
+    I2CONCLR = (1 << 3); // clear SI
+    while (SI == 0);
+    temp = I2DAT; // collect received data
+
+    /* Generate stop condition */
+    exit:
+    I2CONSET = (1 << 4); // STO=1
+    I2CONCLR = (1 << 3); // clear SI
+    return temp;
+}
+
+// i2c_main.c
 #include "header.h"
 
-main() {
-    ushort temp;
-    uarto_init(9600);
-    spi0_init();
-    uarto_tx_string("MCP3204 Testing \r\n");
-
-    while(1) {
-        temp = read_mcp3204(0); // read CH0
-        uarto_tx_integer(temp);
-        uarto_tx_string("\r\n");
-        delay_ms(50); // optional
-    }
+int main() {
+    us temp;
+    i2c_init();
+    uart0_init(9600);
+    uart0_tx_string("I2C Test \r\n");
+    i2c_byte_write_frame(0xA0, 0x2, 0x41);
+    delay_ms(10);
+    temp = i2c_byte_read_frame(0xA0, 0x6);
+    return 0;
 }
 
+
+// main-rtc.c
+#include "header.h"
+
+int main() {
+    us h, m, s;
+    i2c_init();
+    lcd_init();
+
+    /* set rtc time to HH:MM:SS */
+    h = 0x23;
+    m = 0x59;
+    s = 0x58;
+
+    i2c_byte_write_frame(0xD0, 0x2, h); // set hrs
+    i2c_byte_write_frame(0xD0, 0x1, m); // set mins
+    i2c_byte_write_frame(0xD0, 0x0, s); // set secs
+
+    /* read rtc time & dump it on the lcd */
+    while (1) {
+        h = i2c_byte_read_frame(0xD0, 0x2); // read hrs
+        m = i2c_byte_read_frame(0xD0, 0x1); // read mins
+        s = i2c_byte_read_frame(0xD0, 0x0); // read secs
+        lcd_cmd(0x80);
+    }
+    return 0;
+}
 
