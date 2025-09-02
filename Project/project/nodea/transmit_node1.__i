@@ -1,0 +1,1 @@
+-c --cpu ARM7TDMI -D__EVAL -g -O0 --apcs=interwork -I "C:\Keil4\ARM\CMSIS\Include" -I "C:\Keil4\ARM\INC\Philips" -o "transmit_node1.o" --omf_browse "transmit_node1.crf" --depend "transmit_node1.d" "transmit_node1.c"
