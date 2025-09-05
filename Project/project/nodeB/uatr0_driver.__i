@@ -1,1 +1,0 @@
--c --cpu ARM7TDMI -D__EVAL -g -O0 --apcs=interwork -I "C:\Keil4\ARM\CMSIS\Include" -I "C:\Keil4\ARM\INC\Philips" -o "uatr0_driver.o" --omf_browse "uatr0_driver.crf" --depend "uatr0_driver.d" "uatr0_driver.c"

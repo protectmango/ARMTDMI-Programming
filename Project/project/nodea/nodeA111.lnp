@@ -1,4 +1,0 @@
---cpu ARM7TDMI "startup.o" "adc_driver.o" "can2_driver.o" "delay.o" "eint0.o" "eint1.o" "eint2.o" "timer_inter.o" "transmit_node1.o" --strict --scatter "nodeA111.sct" 
---summary_stderr --info summarysizes --map --xref --callgraph --symbols 
---info sizes --info totals --info unused --info veneers 
- --list ".\nodeA111.map" -o "nodeA111.axf"

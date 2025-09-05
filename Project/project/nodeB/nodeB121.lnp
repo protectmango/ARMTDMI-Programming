@@ -1,4 +1,0 @@
---cpu ARM7TDMI "startup.o" "can2_driver.o" "can2_rx_interrupt.o" "delay.o" "lcd_driver.o" "dash_board.o" --strict --scatter "nodeB121.sct" 
---summary_stderr --info summarysizes --map --xref --callgraph --symbols 
---info sizes --info totals --info unused --info veneers 
- --list ".\nodeB121.map" -o "nodeB121.axf"
